@@ -1,0 +1,5 @@
+requests
+pandas==3.0.3
+sqlalchemy
+python-dotenv
+psycopg2-binary
