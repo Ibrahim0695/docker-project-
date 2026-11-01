@@ -1,81 +1,57 @@
-# Crypto ETL (Docker Project)
+# Crypto ETL
 
-This project is a small ETL pipeline that fetches cryptocurrency ticker data from CoinPaprika, transforms it into a pandas DataFrame, and loads the result into PostgreSQL.
+A Python ETL pipeline that fetches cryptocurrency ticker data from CoinPaprika, transforms the first five results, and loads them into PostgreSQL.
 
-## Structure
+## Project files
 
-- `extract.py` — fetches data from the CoinPaprika API
-- `transform.py` — formats and transforms the API data into a DataFrame
-- `load.py` — writes the DataFrame to PostgreSQL
-- `main.py` — orchestrates the ETL flow: extract → transform → load
+- `extract.py` fetches ticker data from CoinPaprika.
+- `transform.py` selects and formats the coin fields.
+- `load.py` writes the results to the PostgreSQL `coins` table.
+- `main.py` runs the extract → transform → load pipeline.
+- `docker-compose.yml` defines the PostgreSQL database and ETL app services.
 
 ## Requirements
 
 - Python 3.12
-- See `requirements.txt` for Python dependencies
+- PostgreSQL, or Docker Desktop with Docker Compose
+- Internet access to reach CoinPaprika
 
-## Run locally
+## Run locally on Windows
 
-1. Create and activate a virtual environment:
+Create and activate a Windows virtual environment, then install the dependencies:
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
 ```
 
-2. Install dependencies:
+Configure the `DATABASE_NAME`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_HOST`, and `DATABASE_PORT` environment variables for a reachable PostgreSQL database. Keep database credentials private and out of source control.
 
-```bash
-pip install -r requirements.txt
-```
+Run the pipeline:
 
-3. Create a `.env` file with database credentials, or set the following environment variables:
-
-```bash
-DATABASE_NAME=coinsdb
-DATABASE_USER=postgres
-DATABASE_PASSWORD=password
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
-```
-
-4. Run the pipeline:
-
-```bash
+```powershell
 python main.py
 ```
 
-## Run with Docker Compose (recommended)
+In VS Code, select `.venv\Scripts\python.exe` as the workspace interpreter. The workspace settings are configured to use this environment and activate it in new terminals.
 
-1. Copy the example env file:
+## Run with Docker Compose
 
-```bash
-cp .env.example .env
-```
+Provide the PostgreSQL settings to both services using a private local environment configuration. The `db` service needs the standard PostgreSQL settings; the `app` service needs `DATABASE_NAME`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_HOST` (set to `db`), and `DATABASE_PORT`. Do not put credentials in this README or commit them to source control.
 
-2. Update `.env` with your database credentials if needed.
+Start the services:
 
-3. Start the services:
-
-```bash
+```powershell
 docker compose up --build
 ```
 
-or if your system uses the legacy binary:
+The app runs the pipeline when it starts. To stop the services, press `Ctrl+C`; to remove the containers while keeping the database volume, run:
 
-```bash
-docker-compose up --build
+```powershell
+docker compose down
 ```
 
-The `docker-compose.yml` starts two services:
+## Data behavior
 
-- `db` — Postgres database
-- `app` — the Python ETL service
-
-The app reads DB connection settings from `.env` and connects to the `db` service.
-
-## Notes
-
-- `main.py` is the entrypoint for the ETL pipeline.
-- If you update `load.py` or other source files, rebuild the Docker image before rerunning the app.
-- If the container fails immediately, check Docker logs with `docker compose logs app` or `docker-compose logs app`.
+Each run loads the first five CoinPaprika ticker results into the PostgreSQL `coins` table. The loader uses `if_exists="replace"`, so it replaces the table and its contents on every successful run.
